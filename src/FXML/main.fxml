@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="Controller">
+
+    <!-- LEFT: Input Card -->
+    <left>
+        <VBox spacing="15" styleClass="card">
+            <padding>
+                <Insets top="20" right="20" bottom="20" left="20"/>
+            </padding>
+
+            <Label text="Input" styleClass="title-label"/>
+
+            <Label text="Algorithm"/>
+            <ComboBox fx:id="algorithmBox" prefWidth="220"/>
+
+            <Label text="Arrival Times"/>
+            <TextField fx:id="arrivalField" promptText="0 2 3"/>
+
+            <Label text="Burst Times"/>
+            <TextField fx:id="burstField" promptText="2 4 6"/>
+
+            <Label text="Quantum (RR / MLFQ)"/>
+            <TextField fx:id="quantumField" promptText="2"/>
+
+            <Button fx:id="solveBtn" text="Solve" onAction="#handleSolve"
+                    styleClass="solve-btn"/>
+        </VBox>
+    </left>
+
+    <!-- RIGHT: Output Card -->
+    <center>
+        <VBox spacing="15" styleClass="card">
+            <padding>
+                <Insets top="20" right="20" bottom="20" left="20"/>
+            </padding>
+
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <Label text="Output" styleClass="title-label"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="algoBadge" text="FCFS" styleClass="algo-badge"/>
+            </HBox>
+
+            <Label text="Gantt Chart" styleClass="subtitle-label"/>
+            <Canvas fx:id="ganttCanvas" width="700" height="120"/>
+
+            <TableView fx:id="resultTable" prefHeight="200">
+                <columns>
+                    <TableColumn fx:id="colJob" text="Job"/>
+                    <TableColumn fx:id="colArrival" text="Arrival"/>
+                    <TableColumn fx:id="colBurst" text="Burst"/>
+                    <TableColumn fx:id="colFinish" text="Finish"/>
+                    <TableColumn fx:id="colTat" text="TAT"/>
+                    <TableColumn fx:id="colWt" text="WT"/>
+                </columns>
+            </TableView>
+
+            <Label fx:id="avgLabel" text="Average Times" styleClass="subtitle-label"/>
+        </VBox>
+    </center>
+
+</BorderPane>

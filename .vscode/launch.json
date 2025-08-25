@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "Main",
+            "projectName": "cpu-scheduling_705f341a",
+            "vmArgs": "--module-path lib/libs --add-modules javafx.controls,javafx.fxml,javafx.graphics"
+        }
+    ]
+}
