@@ -14,7 +14,7 @@ public class Main extends Application {
         Parent root = FXMLLoader.load(getClass().getResource("/FXML/main.fxml"));
         Scene scene = new Scene(root);
 
-        // ✅ Load CSS manually from classpath
+        
         scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
 
         // Set window icon and title
