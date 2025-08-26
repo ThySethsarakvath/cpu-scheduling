@@ -1,6 +1,7 @@
 
 
 # 🧠 CPU Scheduling Algorithm Simulator
+by Thy Sethasarakvath && Do Davin
 
 ---
 
