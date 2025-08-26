@@ -124,8 +124,18 @@ public class Controller {
                     break;
                     
                 case "FCFS":
+                    runFCFS(processes);
+                    break;
+
                 case "SJF":
+                    runSJF(processes);
+                    break;
+
                 case "SRT":
+                    runSRT(processes);
+                    break;
+
+                default:
                     showAlert("Info", "Algorithm not implemented", 
                              selectedAlgorithm + " is selected but not implemented yet.");
                     return;
@@ -197,6 +207,156 @@ public class Controller {
         }
         
         return true;
+    }
+
+    private void runFCFS(List<Process> processes) {
+        // Sort by arrival time
+        processes.sort((p1, p2) -> Integer.compare(p1.getArrivalTime(), p2.getArrivalTime()));
+        int currentTime = 0;
+        
+        for (Process p : processes) {
+            // If CPU is idle until the process arrives, add idle time in Gantt chart
+            if (currentTime < p.getArrivalTime()) {
+                ganttData.add(new GanttEntry("IDLE", currentTime, p.getArrivalTime()));
+                currentTime = p.getArrivalTime();
+            }
+            // Process execution without preemption
+            ganttData.add(new GanttEntry(p.getJob(), currentTime, currentTime + p.getBurstTime()));
+            
+            currentTime += p.getBurstTime();
+            p.setFinishTime(currentTime);
+            p.setTurnaroundTime(currentTime - p.getArrivalTime());
+            p.setWaitingTime(p.getTurnaroundTime() - p.getBurstTime());
+            processData.add(p);
+        }
+    }
+
+    private void runSJF(List<Process> processes) {
+        int n = processes.size();
+        int completed = 0;
+        int currentTime = 0;
+        boolean[] isCompleted = new boolean[n];
+        
+        while (completed < n) {
+            int idx = -1;
+            int minBurst = Integer.MAX_VALUE;
+            
+            // Find process with shortest burst among those that have arrived
+            for (int i = 0; i < n; i++) {
+                Process p = processes.get(i);
+                if (!isCompleted[i] && p.getArrivalTime() <= currentTime && p.getBurstTime() < minBurst) {
+                    minBurst = p.getBurstTime();
+                    idx = i;
+                }
+            }
+            
+            if (idx == -1) {
+                // No process available to run: CPU is idle until next arrival
+                int nextArrival = Integer.MAX_VALUE;
+                for (int i = 0; i < n; i++) {
+                    Process p = processes.get(i);
+                    if (!isCompleted[i] && p.getArrivalTime() < nextArrival) {
+                        nextArrival = p.getArrivalTime();
+                    }
+                }
+                ganttData.add(new GanttEntry("IDLE", currentTime, nextArrival));
+                currentTime = nextArrival;
+                continue;
+            }
+            
+            Process selected = processes.get(idx);
+            int startTime = currentTime;
+            int finishTime = startTime + selected.getBurstTime();
+            
+            // Add Gantt chart entry for the selected process
+            ganttData.add(new GanttEntry(selected.getJob(), startTime, finishTime));
+            
+            // Update process metrics
+            selected.setFinishTime(finishTime);
+            selected.setTurnaroundTime(finishTime - selected.getArrivalTime());
+            selected.setWaitingTime(selected.getTurnaroundTime() - selected.getBurstTime());
+            
+            processData.add(selected);
+            isCompleted[idx] = true;
+            completed++;
+            currentTime = finishTime;
+        }
+    }
+
+    private void runSRT(List<Process> processes) {
+        int n = processes.size();
+        int completed = 0;
+        int currentTime = 0;
+        String lastProcess = "";
+        int segmentStart = 0;
+        
+        while (completed < n) {
+            // Find process with smallest remaining time among those available
+            Process currentProc = null;
+            int minRemaining = Integer.MAX_VALUE;
+            for (Process p : processes) {
+                if (p.getArrivalTime() <= currentTime && p.getRemainingTime() > 0) {
+                    if (p.getRemainingTime() < minRemaining) {
+                        minRemaining = p.getRemainingTime();
+                        currentProc = p;
+                    }
+                }
+            }
+            
+            if (currentProc == null) {
+                // CPU is idle
+                if (!lastProcess.equals("IDLE")) {
+                    if (!lastProcess.equals("")) {
+                        ganttData.add(new GanttEntry(lastProcess, segmentStart, currentTime));
+                    }
+                    lastProcess = "IDLE";
+                    segmentStart = currentTime;
+                }
+                // Jump to next arrival time
+                int nextArrival = Integer.MAX_VALUE;
+                for (Process p : processes) {
+                    if (p.getRemainingTime() > 0 && p.getArrivalTime() > currentTime) {
+                        nextArrival = Math.min(nextArrival, p.getArrivalTime());
+                    }
+                }
+                if (nextArrival == Integer.MAX_VALUE) {
+                    break;
+                }
+                currentTime = nextArrival;
+                continue;
+            }
+            
+            // If process changes, record the previous segment
+            if (!currentProc.getJob().equals(lastProcess)) {
+                if (!lastProcess.equals("")) {
+                    ganttData.add(new GanttEntry(lastProcess, segmentStart, currentTime));
+                }
+                lastProcess = currentProc.getJob();
+                segmentStart = currentTime;
+            }
+            
+            // Execute the process for one time unit
+            currentProc.setRemainingTime(currentProc.getRemainingTime() - 1);
+            currentTime++;
+            
+            // If the process finishes execution, update its metrics
+            if (currentProc.getRemainingTime() == 0) {
+                currentProc.setFinishTime(currentTime);
+                currentProc.setTurnaroundTime(currentTime - currentProc.getArrivalTime());
+                currentProc.setWaitingTime(currentProc.getTurnaroundTime() - currentProc.getBurstTime());
+                completed++;
+            }
+        }
+        
+        // Record final segment
+        if (!lastProcess.equals("")) {
+            ganttData.add(new GanttEntry(lastProcess, segmentStart, currentTime));
+        }
+        
+        // Add processes to the table (order can be adjusted as needed)
+        for (Process p : processes) {
+            processData.add(p);
+        }
     }
 
     private void runRR(List<Process> processes, int quantum) {
