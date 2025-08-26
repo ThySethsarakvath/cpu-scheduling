@@ -54,27 +54,35 @@ public class Controller {
         
         algorithmBox.valueProperty().addListener((obs, oldVal, newVal) -> {
             algoBadge.setText(newVal);
+            updateQuantumFieldVisibility(newVal);
         });
+        
+        // Set initial visibility
+        updateQuantumFieldVisibility(algorithmBox.getValue());
+    }
+
+    private void updateQuantumFieldVisibility(String algorithm) {
+        boolean needsQuantum = "RR".equals(algorithm) || "MLFQ".equals(algorithm);
+        quantumField.setVisible(needsQuantum);
+        quantumField.setManaged(needsQuantum);
+        
+        // Update prompt text based on algorithm
+        if ("RR".equals(algorithm)) {
+            quantumField.setPromptText("Quantum (e.g., 2)");
+        } else if ("MLFQ".equals(algorithm)) {
+            quantumField.setPromptText("Quantum1 Quantum2 (e.g., 2 4)");
+        }
     }
 
     @FXML
     void handleSolve(ActionEvent event) {
         String selectedAlgorithm = algorithmBox.getValue();
         
-        if ("MLFQ".equals(selectedAlgorithm)) {
-            solveMLFQ();
-        } else {
-            showAlert("Info", "Algorithm not implemented", 
-                     selectedAlgorithm + " is selected but only MLFQ is implemented for this demo.");
-        }
-    }
-
-    private void solveMLFQ() {
         processData.clear();
         ganttData.clear();
         ganttChart.clear();
         
-        if (!validateInputs()) {
+        if (!validateInputs(selectedAlgorithm)) {
             return;
         }
         
@@ -87,55 +95,180 @@ public class Controller {
                     .mapToInt(Integer::parseInt)
                     .toArray();
             
-            int[] quantums = Arrays.stream(quantumField.getText().split("\\s+"))
-                    .mapToInt(Integer::parseInt)
-                    .toArray();
-            
-            if (quantums.length != 2) {
-                showAlert("Input Error", "Invalid Quantum", 
-                         "Please enter exactly 2 quantum values (for first two queues)");
-                return;
-            }
-            
             List<Process> processes = new ArrayList<>();
             for (int i = 0; i < arrivalTimes.length; i++) {
                 processes.add(new Process("P" + (i + 1), arrivalTimes[i], burstTimes[i]));
             }
             
-            runMLFQ(processes, quantums[0], quantums[1]);
-            calculateAverages();
+            switch (selectedAlgorithm) {
+                case "MLFQ":
+                    int[] mlfqQuantums = Arrays.stream(quantumField.getText().split("\\s+"))
+                            .mapToInt(Integer::parseInt)
+                            .toArray();
+                    if (mlfqQuantums.length != 2) {
+                        showAlert("Input Error", "Invalid Quantum", 
+                                 "MLFQ requires exactly 2 quantum values (e.g., 2 4)");
+                        return;
+                    }
+                    runMLFQ(processes, mlfqQuantums[0], mlfqQuantums[1]);
+                    break;
+                    
+                case "RR":
+                    int rrQuantum = Integer.parseInt(quantumField.getText().trim());
+                    if (rrQuantum <= 0) {
+                        showAlert("Input Error", "Invalid Quantum", 
+                                 "Quantum must be a positive integer");
+                        return;
+                    }
+                    runRR(processes, rrQuantum);
+                    break;
+                    
+                case "FCFS":
+                case "SJF":
+                case "SRT":
+                    showAlert("Info", "Algorithm not implemented", 
+                             selectedAlgorithm + " is selected but not implemented yet.");
+                    return;
+            }
             
-            // Set Gantt data and draw
+            calculateAverages();
             ganttChart.setGanttData(ganttData);
             ganttChart.draw();
             
         } catch (NumberFormatException e) {
             showAlert("Input Error", "Invalid Number", 
                      "Please enter valid numbers for all fields");
+        } catch (Exception e) {
+            showAlert("Error", "Unexpected Error", 
+                     "An error occurred: " + e.getMessage());
         }
     }
 
-    private boolean validateInputs() {
+    private boolean validateInputs(String algorithm) {
         String arrivalText = arrivalField.getText().trim();
         String burstText = burstField.getText().trim();
         String quantumText = quantumField.getText().trim();
         
-        if (arrivalText.isEmpty() || burstText.isEmpty() || quantumText.isEmpty()) {
+        // Check empty fields
+        if (arrivalText.isEmpty() || burstText.isEmpty()) {
             showAlert("Input Error", "Missing Input", 
-                     "Please fill in all fields");
+                     "Please fill in arrival and burst times");
+            return false;
+        }
+        
+        // Check if quantum field is required and filled
+        if (("RR".equals(algorithm) || "MLFQ".equals(algorithm)) && quantumText.isEmpty()) {
+            showAlert("Input Error", "Missing Quantum", 
+                     "Please enter quantum value(s) for " + algorithm);
             return false;
         }
         
         String[] arrivalParts = arrivalText.split("\\s+");
         String[] burstParts = burstText.split("\\s+");
         
+        // Check matching number of processes
         if (arrivalParts.length != burstParts.length) {
             showAlert("Input Error", "Mismatched Input", 
-                     "Number of arrival times must match number of burst times");
+                     "Number of arrival times (" + arrivalParts.length + 
+                     ") must match number of burst times (" + burstParts.length + ")");
+            return false;
+        }
+        
+        // Check for negative values
+        try {
+            for (String part : arrivalParts) {
+                if (Integer.parseInt(part) < 0) {
+                    showAlert("Input Error", "Invalid Value", 
+                             "Arrival times cannot be negative");
+                    return false;
+                }
+            }
+            for (String part : burstParts) {
+                if (Integer.parseInt(part) <= 0) {
+                    showAlert("Input Error", "Invalid Value", 
+                             "Burst times must be positive");
+                    return false;
+                }
+            }
+        } catch (NumberFormatException e) {
+            showAlert("Input Error", "Invalid Number", 
+                     "Please enter valid integers only");
             return false;
         }
         
         return true;
+    }
+
+    private void runRR(List<Process> processes, int quantum) {
+        Queue<Process> readyQueue = new LinkedList<>();
+        List<Process> completedProcesses = new ArrayList<>();
+        int currentTime = 0;
+        
+        // Create copies of processes for execution
+        List<Process> executionProcesses = new ArrayList<>();
+        for (Process p : processes) {
+            executionProcesses.add(new Process(p));
+        }
+        
+        // Sort by arrival time
+        executionProcesses.sort((p1, p2) -> Integer.compare(p1.getArrivalTime(), p2.getArrivalTime()));
+        
+        int processIndex = 0;
+        Process currentProcess = null;
+        
+        while (completedProcesses.size() < executionProcesses.size()) {
+            // Add all processes that have arrived by current time
+            while (processIndex < executionProcesses.size() && 
+                   executionProcesses.get(processIndex).getArrivalTime() <= currentTime) {
+                readyQueue.add(executionProcesses.get(processIndex));
+                processIndex++;
+            }
+            
+            // If no process in ready queue but still processes left, add idle time
+            if (readyQueue.isEmpty() && processIndex < executionProcesses.size()) {
+                int nextArrival = executionProcesses.get(processIndex).getArrivalTime();
+                ganttData.add(new GanttEntry("IDLE", currentTime, nextArrival));
+                currentTime = nextArrival;
+                continue;
+            }
+            
+            // Get next process from ready queue
+            if (currentProcess == null || currentProcess.getRemainingTime() == 0) {
+                if (!readyQueue.isEmpty()) {
+                    currentProcess = readyQueue.poll();
+                } else {
+                    break;
+                }
+            }
+            
+            // Execute the process for quantum or remaining time
+            int executionTime = Math.min(currentProcess.getRemainingTime(), quantum);
+            ganttData.add(new GanttEntry(currentProcess.getJob(), currentTime, currentTime + executionTime));
+            
+            currentTime += executionTime;
+            currentProcess.setRemainingTime(currentProcess.getRemainingTime() - executionTime);
+            
+            // Add arriving processes during execution
+            while (processIndex < executionProcesses.size() && 
+                   executionProcesses.get(processIndex).getArrivalTime() <= currentTime) {
+                readyQueue.add(executionProcesses.get(processIndex));
+                processIndex++;
+            }
+            
+            // Check if process completed
+            if (currentProcess.getRemainingTime() == 0) {
+                currentProcess.setFinishTime(currentTime);
+                currentProcess.setTurnaroundTime(currentTime - currentProcess.getArrivalTime());
+                currentProcess.setWaitingTime(currentProcess.getTurnaroundTime() - currentProcess.getBurstTime());
+                completedProcesses.add(currentProcess);
+                processData.add(currentProcess);
+                currentProcess = null;
+            } else {
+                // Put back in ready queue if not completed
+                readyQueue.add(currentProcess);
+                currentProcess = null;
+            }
+        }
     }
 
     private void runMLFQ(List<Process> processes, int quantum1, int quantum2) {

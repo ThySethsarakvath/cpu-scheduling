@@ -6,17 +6,26 @@ public class Process {
     private int finishTime;
     private int turnaroundTime;
     private int waitingTime;
-    private int queueLevel; // Which queue the process is currently in
+    private int queueLevel;
 
     public Process(String job, int arrivalTime, int burstTime) {
         this.job = job;
         this.arrivalTime = arrivalTime;
         this.burstTime = burstTime;
         this.remainingTime = burstTime;
-        this.queueLevel = 0; // Start in queue 0
+        this.queueLevel = 0;
     }
 
-    // Getters and setters for all fields
+    // Copy constructor for RR algorithm
+    public Process(Process other) {
+        this.job = other.job;
+        this.arrivalTime = other.arrivalTime;
+        this.burstTime = other.burstTime;
+        this.remainingTime = other.remainingTime;
+        this.queueLevel = other.queueLevel;
+    }
+
+    // Getters and setters...
     public String getJob() { return job; }
     public int getArrivalTime() { return arrivalTime; }
     public int getBurstTime() { return burstTime; }
