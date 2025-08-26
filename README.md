@@ -5,9 +5,6 @@
 ---
 
 ## 📚 Table of Contents
-- [🧠 CPU Scheduling Algorithm Simulator](#-cpu-scheduling-algorithm-simulator)
-  - [📚 Table of Contents](#-table-of-contents)
-  - [🧠 Project Title](#-project-title)
   - [🎯 Objectives](#-objectives)
   - [🛠️ Technology Stack](#️-technology-stack)
   - [📁 Project Structure Overview](#-project-structure-overview)
