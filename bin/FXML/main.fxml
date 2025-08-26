@@ -6,7 +6,7 @@
 <?import javafx.scene.layout.*?>
 
 <BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="Controller"
-    stylesheets="../style.css"
+    stylesheets="@style.css"
 >
 
     <!-- LEFT: Input Card -->
@@ -56,12 +56,13 @@
                     <TableColumn fx:id="colJob" text="Job" />
                     <TableColumn fx:id="colArrival" text="Arrival" />
                     <TableColumn fx:id="colBurst" text="Burst" />
+                    <TableColumn fx:id="colStart" text="Start" />
                     <TableColumn fx:id="colFinish" text="Finish" />
                     <TableColumn fx:id="colTat" text="TAT" />
                     <TableColumn fx:id="colWt" text="WT" />
+                    <TableColumn fx:id="colRt" text="RT" />
                 </columns>
             </TableView>
-
             <Label fx:id="avgLabel" text="Average Times" styleClass="subtitle-label" />
         </VBox>
     </center>
